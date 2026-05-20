@@ -37,7 +37,19 @@ npm run dev
 
 Then open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### Build for production
+### Build a desktop installer (recommended for sharing)
+
+This creates a native desktop app — no Node.js required for the end user.
+
+```bash
+npm run electron:build:win    # Windows  → release/Home Layout Planner Setup x.x.x.exe
+npm run electron:build:mac    # macOS    → release/Home Layout Planner-x.x.x.dmg
+npm run electron:build:linux  # Linux    → release/Home Layout Planner-x.x.x.AppImage
+```
+
+Send the installer file to whoever needs to use the app. They just double-click it to install, then launch it like any other program. All data is stored locally on their machine.
+
+### Build for the browser (optional)
 
 ```bash
 npm run build
