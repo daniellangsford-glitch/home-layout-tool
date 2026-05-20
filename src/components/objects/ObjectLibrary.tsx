@@ -1,4 +1,3 @@
-import React from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { getPresetsForViewMode } from '../../data/presets';
 import type { Plan } from '../../types/plan';

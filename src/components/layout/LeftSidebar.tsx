@@ -1,4 +1,3 @@
-import React from 'react';
 import { PlanList } from '../plans/PlanList';
 import { DrawTools } from '../objects/DrawTools';
 import { ObjectPanel } from '../objects/ObjectPanel';

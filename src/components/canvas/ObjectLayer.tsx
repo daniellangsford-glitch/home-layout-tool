@@ -1,4 +1,3 @@
-import React from 'react';
 import { Group, Text } from 'react-konva';
 import type { LayoutObject } from '../../types/layoutObject';
 import type { MeasurementUnit } from '../../types/plan';

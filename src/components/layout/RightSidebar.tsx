@@ -1,4 +1,3 @@
-import React from 'react';
 import { ObjectInspector } from '../objects/ObjectInspector';
 import { PlanSettings } from '../plans/PlanSettings';
 import { ZoneInspector } from '../zones/ZoneInspector';

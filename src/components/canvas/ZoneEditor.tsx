@@ -1,4 +1,3 @@
-import React from 'react';
 import { Group, Circle } from 'react-konva';
 import type { Zone } from '../../types/zone';
 import { BoundaryHandle } from './BoundaryHandle';

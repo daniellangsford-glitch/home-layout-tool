@@ -1,4 +1,3 @@
-import React from 'react';
 import { Group, Line, Rect, Text } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Zone } from '../../types/zone';

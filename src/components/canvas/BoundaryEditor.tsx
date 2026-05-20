@@ -1,5 +1,4 @@
-import React from 'react';
-import { Group, Line, Circle } from 'react-konva';
+import { Group, Circle } from 'react-konva';
 import type { PlanBoundary } from '../../types/plan';
 import { BoundaryHandle } from './BoundaryHandle';
 import { toPixels, toUnits, snapToGrid } from '../../lib/scale';

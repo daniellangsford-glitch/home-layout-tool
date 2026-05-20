@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import Konva from 'konva';
 import { Header } from './Header';
 import { LeftSidebar } from './LeftSidebar';
@@ -13,8 +13,6 @@ export function AppShell() {
   const stageRef = useRef<Konva.Stage | null>(null);
   const getActivePlan = useProjectStore((s) => s.getActivePlan);
   const loadFromStorage = useProjectStore((s) => s.loadFromStorage);
-  const activePlanId = useProjectStore((s) => s.activePlanId);
-  const project = useProjectStore((s) => s.project);
 
   useEffect(() => {
     loadFromStorage();

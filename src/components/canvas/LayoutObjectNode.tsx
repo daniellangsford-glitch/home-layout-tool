@@ -1,4 +1,3 @@
-import React from 'react';
 import { Rect, Ellipse, Text, Group } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { LayoutObject } from '../../types/layoutObject';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Line, Rect, Text } from 'react-konva';
 import type { PlanBoundary, MeasurementUnit } from '../../types/plan';
 import { toPixels, formatMeasurement } from '../../lib/scale';

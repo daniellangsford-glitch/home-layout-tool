@@ -1,4 +1,3 @@
-import React from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { Button } from '../ui/Button';
@@ -15,7 +14,6 @@ type Props = {
 export function ObjectInspector({ plan }: Props) {
   const selectedObjectIds = useCanvasStore((s) => s.selectedObjectIds);
   const selectedBoundaryPointIndex = useCanvasStore((s) => s.selectedBoundaryPointIndex);
-  const setSelectedBoundaryPoint = useCanvasStore((s) => s.setSelectedBoundaryPoint);
   const clearSelection = useCanvasStore((s) => s.clearSelection);
   const updateObject = useProjectStore((s) => s.updateObject);
   const deleteObject = useProjectStore((s) => s.deleteObject);

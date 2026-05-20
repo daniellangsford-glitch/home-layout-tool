@@ -1,5 +1,4 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProjectStore } from '../../stores/projectStore';
@@ -25,7 +24,8 @@ type Props = {
 export function PlanForm({ onComplete }: Props) {
   const createPlan = useProjectStore((s) => s.createPlan);
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       name: '',
       type: 'floor',
@@ -36,7 +36,7 @@ export function PlanForm({ onComplete }: Props) {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit: SubmitHandler<FormData> = (data) => {
     createPlan(data);
     onComplete();
   };

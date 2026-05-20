@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { Stage, Layer, Rect, Ellipse } from 'react-konva';
 import Konva from 'konva';
 import type { Plan } from '../../types/plan';
@@ -25,7 +25,7 @@ type DrawState = {
 
 type Props = {
   plan: Plan;
-  stageRef: React.RefObject<Konva.Stage | null>;
+  stageRef: import('react').RefObject<Konva.Stage | null>;
 };
 
 export function LayoutCanvas({ plan, stageRef }: Props) {
@@ -310,7 +310,7 @@ export function LayoutCanvas({ plan, stageRef }: Props) {
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onClick={handleStageClick}
-          onTap={handleStageClick}
+          onTap={() => clearSelection()}
         >
           <Layer>
             <BoundaryLayer

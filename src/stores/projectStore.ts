@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Project, UserPreset } from '../types/project';
 import type { Zone } from '../types/zone';
-import type { Plan, PlanBoundary, GridSettings, PlanType, ViewMode, MeasurementUnit } from '../types/plan';
+import type { Plan, PlanBoundary } from '../types/plan';
 import type { LayoutObject } from '../types/layoutObject';
 import type { Point } from '../types/geometry';
 import { generateId } from '../lib/ids';
@@ -510,12 +510,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const project = await loadLatestProject();
     if (project) {
       const normalized = {
-        userPresets: [],
         ...project,
+        userPresets: project.userPresets ?? [],
         plans: project.plans.map((p) => ({
-          zones: [],
-          dimensions: { showOnBoundary: false, showOnZones: false, showOnObjects: false },
           ...p,
+          zones: p.zones ?? [],
+          dimensions: p.dimensions ?? { showOnBoundary: false, showOnZones: false, showOnObjects: false },
         })),
       };
       set({

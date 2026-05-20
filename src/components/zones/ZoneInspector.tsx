@@ -1,4 +1,3 @@
-import React from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { Button } from '../ui/Button';

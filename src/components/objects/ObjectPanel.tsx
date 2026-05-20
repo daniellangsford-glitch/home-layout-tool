@@ -8,13 +8,6 @@ type Props = {
   plan: Plan;
 };
 
-const SHAPE_ICONS: Record<string, string> = {
-  rectangle: '▭',
-  circle: '○',
-  ellipse: '⬭',
-  text: 'T',
-  line: '/',
-};
 
 export function ObjectPanel({ plan }: Props) {
   const selectedObjectIds = useCanvasStore((s) => s.selectedObjectIds);

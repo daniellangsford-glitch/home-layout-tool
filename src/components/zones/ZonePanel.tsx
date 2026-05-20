@@ -1,4 +1,3 @@
-import React from 'react';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useProjectStore } from '../../stores/projectStore';
 import type { Plan } from '../../types/plan';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { Button } from '../ui/Button';
 import type { Plan } from '../../types/plan';
@@ -12,9 +11,11 @@ export function BottomBar({ activePlan }: Props) {
   const zoom = useCanvasStore((s) => s.zoom);
   const setZoom = useCanvasStore((s) => s.setZoom);
   const activeTool = useCanvasStore((s) => s.activeTool);
-  const selectedObjectId = useCanvasStore((s) => s.selectedObjectId);
+  const selectedObjectIds = useCanvasStore((s) => s.selectedObjectIds);
 
-  const selectedObject = activePlan?.objects.find((o) => o.id === selectedObjectId);
+  const selectedObject = selectedObjectIds.length === 1
+    ? activePlan?.objects.find((o) => o.id === selectedObjectIds[0])
+    : undefined;
   const unit = activePlan?.unit ?? 'ft';
 
   return (

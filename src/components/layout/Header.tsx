@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef, type ChangeEvent } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { Button } from '../ui/Button';
 import type { Plan } from '../../types/plan';
@@ -6,11 +6,10 @@ import Konva from 'konva';
 
 type Props = {
   activePlan: Plan | null;
-  stageRef: React.RefObject<Konva.Stage | null>;
+  stageRef: import('react').RefObject<Konva.Stage | null>;
 };
 
 export function Header({ activePlan, stageRef }: Props) {
-  const project = useProjectStore((s) => s.project);
   const saveState = useProjectStore((s) => s.saveState);
   const past = useProjectStore((s) => s.past);
   const future = useProjectStore((s) => s.future);
@@ -42,7 +41,7 @@ export function Header({ activePlan, stageRef }: Props) {
     a.click();
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();

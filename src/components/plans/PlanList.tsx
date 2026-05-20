@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
-import { useCanvasStore } from '../../stores/canvasStore';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { PlanForm } from './PlanForm';
@@ -8,7 +7,6 @@ import type { Plan } from '../../types/plan';
 
 export function PlanList() {
   const project = useProjectStore((s) => s.project);
-  const activePlanId = useCanvasStore((s) => s.selectedObjectId);
   const setActivePlan = useProjectStore((s) => s.setActivePlan);
   const storeActivePlanId = useProjectStore((s) => s.activePlanId);
   const deletePlan = useProjectStore((s) => s.deletePlan);

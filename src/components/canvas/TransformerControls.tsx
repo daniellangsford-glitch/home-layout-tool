@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { Transformer } from 'react-konva';
 import Konva from 'konva';
 import type { LayoutObject } from '../../types/layoutObject';

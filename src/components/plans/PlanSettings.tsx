@@ -1,11 +1,9 @@
-import React from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { NumberInput } from '../ui/NumberInput';
 import { Select } from '../ui/Select';
-import { formatMeasurement } from '../../lib/scale';
 import type { Plan } from '../../types/plan';
 
 type Props = {
