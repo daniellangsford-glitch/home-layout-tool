@@ -1,5 +1,6 @@
 import { useRef, type ChangeEvent } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
+import { useCanvasStore } from '../../stores/canvasStore';
 import { Button } from '../ui/Button';
 import type { Plan } from '../../types/plan';
 import Konva from 'konva';
@@ -10,6 +11,8 @@ type Props = {
 };
 
 export function Header({ activePlan, stageRef }: Props) {
+  const renderMode = useCanvasStore((s) => s.renderMode);
+  const setRenderMode = useCanvasStore((s) => s.setRenderMode);
   const saveState = useProjectStore((s) => s.saveState);
   const past = useProjectStore((s) => s.past);
   const future = useProjectStore((s) => s.future);
@@ -66,6 +69,23 @@ export function Header({ activePlan, stageRef }: Props) {
         </span>
       )}
       <div className="flex-1" />
+      {/* 2D / 3D toggle */}
+      {activePlan && (
+        <div className="flex rounded overflow-hidden border border-gray-200">
+          <button
+            onClick={() => setRenderMode('2d')}
+            className={`px-3 py-1 text-xs font-semibold transition-colors ${renderMode === '2d' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            2D
+          </button>
+          <button
+            onClick={() => setRenderMode('3d')}
+            className={`px-3 py-1 text-xs font-semibold transition-colors ${renderMode === '3d' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            3D
+          </button>
+        </div>
+      )}
       <span className={`text-xs font-medium ${saveColors[saveState]}`}>{saveLabels[saveState]}</span>
       <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
         <button

@@ -154,6 +154,16 @@ export function ObjectInspector({ plan }: Props) {
         />
       </div>
 
+      {!isText && (
+        <NumberInput
+          label="3D Height"
+          step={0.1}
+          min={0.05}
+          value={Math.round((selectedObject.height3d ?? 0.75) * 10) / 10}
+          onChange={(v) => update({ height3d: v })}
+        />
+      )}
+
       {isText ? (
         <>
           <NumberInput

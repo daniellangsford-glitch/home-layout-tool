@@ -42,6 +42,7 @@ const LayoutObjectSchema = z.object({
   fontSize: z.number().positive().optional(),
   snapDisabled: z.boolean().optional(),
   showDimensions: z.boolean().optional(),
+  height3d: z.number().positive().optional(),
 });
 
 const ZoneSchema = z.object({

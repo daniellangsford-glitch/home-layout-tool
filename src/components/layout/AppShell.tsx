@@ -5,7 +5,9 @@ import { LeftSidebar } from './LeftSidebar';
 import { RightSidebar } from './RightSidebar';
 import { BottomBar } from './BottomBar';
 import { LayoutCanvas } from '../canvas/LayoutCanvas';
+import { ThreeDCanvas } from '../canvas3d/ThreeDCanvas';
 import { useProjectStore } from '../../stores/projectStore';
+import { useCanvasStore } from '../../stores/canvasStore';
 import { useAutosave } from '../../hooks/useAutosave';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
@@ -13,6 +15,7 @@ export function AppShell() {
   const stageRef = useRef<Konva.Stage | null>(null);
   const getActivePlan = useProjectStore((s) => s.getActivePlan);
   const loadFromStorage = useProjectStore((s) => s.loadFromStorage);
+  const renderMode = useCanvasStore((s) => s.renderMode);
 
   useEffect(() => {
     loadFromStorage();
@@ -30,7 +33,11 @@ export function AppShell() {
         <LeftSidebar activePlan={activePlan} />
         <main className="flex-1 overflow-hidden">
           {activePlan ? (
-            <LayoutCanvas plan={activePlan} stageRef={stageRef} />
+            renderMode === '3d' ? (
+              <ThreeDCanvas plan={activePlan} />
+            ) : (
+              <LayoutCanvas plan={activePlan} stageRef={stageRef} />
+            )
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
               Create a plan to get started

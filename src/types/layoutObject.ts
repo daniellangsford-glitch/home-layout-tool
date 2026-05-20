@@ -23,4 +23,5 @@ export type LayoutObject = {
   fontSize?: number;
   snapDisabled?: boolean;
   showDimensions?: boolean;
+  height3d?: number;
 };

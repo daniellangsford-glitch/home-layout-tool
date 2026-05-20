@@ -21,6 +21,8 @@ type CanvasStore = {
   setSelectedZone: (id: string | null) => void;
   setEditingZone: (id: string | null) => void;
   setSelectedZonePoint: (index: number | null) => void;
+  renderMode: '2d' | '3d';
+  setRenderMode: (mode: '2d' | '3d') => void;
   setZoom: (zoom: number) => void;
   setPan: (pan: Point) => void;
   setActiveTool: (tool: ActiveTool) => void;
@@ -34,6 +36,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   selectedZoneId: null,
   editingZoneId: null,
   selectedZonePointIndex: null,
+  renderMode: '2d',
   zoom: 1,
   pan: { x: 0, y: 0 },
   activeTool: 'select',
@@ -60,6 +63,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   setSelectedZone: (id) => set({ selectedZoneId: id, selectedObjectIds: [], selectedBoundaryPointIndex: null }),
   setEditingZone: (id) => set({ editingZoneId: id, selectedZonePointIndex: null }),
   setSelectedZonePoint: (index) => set({ selectedZonePointIndex: index }),
+  setRenderMode: (mode) => set({ renderMode: mode }),
   setZoom: (zoom) => set({ zoom }),
   setPan: (pan) => set({ pan }),
   setActiveTool: (tool) => set({ activeTool: tool }),
