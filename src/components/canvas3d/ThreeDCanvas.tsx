@@ -145,7 +145,7 @@ function WallHeightHandle({ plan, pointIndex, x, z, height, isSelected, orbitRef
 
   const handleRadius = Math.max(plan.width, plan.height) * 0.015;
 
-  const onPointerDown = useCallback((e: Parameters<NonNullable<React.ComponentProps<'mesh'>['onPointerDown']>>[0]) => {
+  const onPointerDown = useCallback((e: import('@react-three/fiber').ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     setSelectedWallPoint(pointIndex);
     if (orbitRef.current) orbitRef.current.enabled = false;
@@ -369,7 +369,7 @@ function SceneObject({ object, unit }: { object: LayoutObject; unit: Measurement
   const color = object.fill || '#94a3b8';
   const isTransparent = object.opacity < 0.99;
 
-  const handleClick = (e: Parameters<NonNullable<React.ComponentProps<'mesh'>['onClick']>>[0]) => {
+  const handleClick = (e: import('@react-three/fiber').ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     setSelectedObject(object.id);
   };
