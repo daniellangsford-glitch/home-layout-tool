@@ -4,7 +4,11 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { NumberInput } from '../ui/NumberInput';
 import { Select } from '../ui/Select';
-import type { Plan } from '../../types/plan';
+import type { Plan, MeasurementUnit } from '../../types/plan';
+
+function unitDefaultWallHeight(unit: MeasurementUnit): number {
+  return unit === 'm' ? 2.4 : unit === 'cm' ? 240 : unit === 'ft' ? 8 : 96;
+}
 
 type Props = {
   plan: Plan;
@@ -13,6 +17,7 @@ type Props = {
 export function PlanSettings({ plan }: Props) {
   const updatePlan = useProjectStore((s) => s.updatePlan);
   const resetBoundary = useProjectStore((s) => s.resetBoundaryToRectangle);
+  const setWallHeight = useProjectStore((s) => s.setWallHeight);
   const setActiveTool = useCanvasStore((s) => s.setActiveTool);
   const activeTool = useCanvasStore((s) => s.activeTool);
   const clearSelection = useCanvasStore((s) => s.clearSelection);
@@ -183,6 +188,22 @@ export function PlanSettings({ plan }: Props) {
             {label}
           </label>
         ))}
+      </div>
+
+      <div className="border-t pt-3 flex flex-col gap-3">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">3D Walls</div>
+
+        <NumberInput
+          label={`Default Wall Height (${plan.unit})`}
+          value={plan.wallHeight ?? unitDefaultWallHeight(plan.unit)}
+          min={0}
+          step={0.1}
+          onChange={(v) => setWallHeight(plan.id, v)}
+        />
+
+        <p className="text-xs text-gray-400 leading-tight">
+          Switch to 3D view to drag individual corner heights or set wall opacity.
+        </p>
       </div>
     </div>
   );

@@ -14,6 +14,11 @@ type CanvasStore = {
   activeTool: ActiveTool;
   cursorPosition: Point;
 
+  // 3D-specific
+  wallOpacity: number;
+  wallHeightEditMode: boolean;
+  selectedWallPointIndex: number | null;
+
   setSelectedObject: (id: string | null) => void;
   setSelectedObjects: (ids: string[]) => void;
   toggleSelectObject: (id: string) => void;
@@ -28,6 +33,10 @@ type CanvasStore = {
   setActiveTool: (tool: ActiveTool) => void;
   setCursorPosition: (pos: Point) => void;
   clearSelection: () => void;
+
+  setWallOpacity: (opacity: number) => void;
+  setWallHeightEditMode: (active: boolean) => void;
+  setSelectedWallPoint: (index: number | null) => void;
 };
 
 export const useCanvasStore = create<CanvasStore>((set, get) => ({
@@ -41,6 +50,9 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   pan: { x: 0, y: 0 },
   activeTool: 'select',
   cursorPosition: { x: 0, y: 0 },
+  wallOpacity: 1,
+  wallHeightEditMode: false,
+  selectedWallPointIndex: null,
 
   setSelectedObject: (id) => set({
     selectedObjectIds: id ? [id] : [],
@@ -75,4 +87,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     editingZoneId: null,
     selectedZonePointIndex: null,
   }),
+
+  setWallOpacity: (opacity) => set({ wallOpacity: opacity }),
+  setWallHeightEditMode: (active) => set({ wallHeightEditMode: active, selectedWallPointIndex: null }),
+  setSelectedWallPoint: (index) => set({ selectedWallPointIndex: index }),
 }));

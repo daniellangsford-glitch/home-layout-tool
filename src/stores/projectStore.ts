@@ -47,6 +47,16 @@ type ProjectStore = {
   addBoundaryPoint: (planId: string, edgeIndex: number, point: Point) => void;
   removeBoundaryPoint: (planId: string, pointIndex: number) => void;
   resetBoundaryToRectangle: (planId: string) => void;
+  setWallHeight: (planId: string, height: number) => void;
+  setPointHeight: (planId: string, pointIndex: number, height: number | null) => void;
+  /** Updates point height without creating an undo entry — use during continuous drag. */
+  setPointHeightNoPush: (planId: string, pointIndex: number, height: number | null) => void;
+  /** Saves current state to undo history — call once at drag start. */
+  pushUndoSnapshot: () => void;
+  addBoundaryPointWithHeight: (planId: string, edgeIndex: number, point: Point, height: number) => void;
+  setFloorColor: (planId: string, color: string) => void;
+  setWallColor: (planId: string, color: string) => void;
+  setSegmentWallColor: (planId: string, segmentIndex: number, color: string | null) => void;
 
   // Zones
   addZone: (planId: string, zone: Omit<Zone, 'id'>) => void;
@@ -335,7 +345,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         plans: state.project.plans.map((p) => {
           if (p.id !== planId) return p;
           const points = insertPointOnEdge(p.boundary.points, edgeIndex, point);
-          return touchPlan({ ...p, boundary: { type: 'polygon', points } });
+          const prevHeights = p.boundary.pointHeights ?? [];
+          const pointHeights = [
+            ...prevHeights.slice(0, edgeIndex + 1),
+            null,
+            ...prevHeights.slice(edgeIndex + 1),
+          ];
+          const prevColors = p.boundary.wallColors ?? [];
+          const wallColors = [
+            ...prevColors.slice(0, edgeIndex + 1),
+            null,
+            ...prevColors.slice(edgeIndex + 1),
+          ];
+          return touchPlan({ ...p, boundary: { type: 'polygon', points, pointHeights, wallColors } });
         }),
       }),
       saveState: 'unsaved',
@@ -350,7 +372,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         plans: state.project.plans.map((p) => {
           if (p.id !== planId) return p;
           const points = removeBoundaryPoint(p.boundary.points, pointIndex);
-          return touchPlan({ ...p, boundary: { ...p.boundary, points } });
+          const prevHeights = p.boundary.pointHeights ?? [];
+          const pointHeights = prevHeights.filter((_, i) => i !== pointIndex);
+          const prevColors = p.boundary.wallColors ?? [];
+          const wallColors = prevColors.filter((_, i) => i !== pointIndex);
+          return touchPlan({ ...p, boundary: { ...p.boundary, points, pointHeights, wallColors } });
         }),
       }),
       saveState: 'unsaved',
@@ -365,7 +391,131 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         plans: state.project.plans.map((p) => {
           if (p.id !== planId) return p;
           const points = createRectangleBoundary(p.width, p.height);
-          return touchPlan({ ...p, boundary: { type: 'rectangle', points } });
+          return touchPlan({ ...p, boundary: { type: 'rectangle', points, pointHeights: [], wallColors: [] } });
+        }),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  setWallHeight: (planId, height) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) =>
+          p.id === planId ? touchPlan({ ...p, wallHeight: height }) : p
+        ),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  setPointHeight: (planId, pointIndex, height) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) => {
+          if (p.id !== planId) return p;
+          const pointHeights = [...(p.boundary.pointHeights ?? Array(p.boundary.points.length).fill(null))];
+          // Ensure array is long enough
+          while (pointHeights.length < p.boundary.points.length) pointHeights.push(null);
+          pointHeights[pointIndex] = height;
+          return touchPlan({ ...p, boundary: { ...p.boundary, pointHeights } });
+        }),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  setPointHeightNoPush: (planId, pointIndex, height) => {
+    set((state) => ({
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) => {
+          if (p.id !== planId) return p;
+          const pointHeights = [...(p.boundary.pointHeights ?? Array(p.boundary.points.length).fill(null))];
+          while (pointHeights.length < p.boundary.points.length) pointHeights.push(null);
+          pointHeights[pointIndex] = height;
+          return touchPlan({ ...p, boundary: { ...p.boundary, pointHeights } });
+        }),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  pushUndoSnapshot: () => {
+    set((state) => ({
+      past: pushPast(state.past, state.project),
+      future: [],
+    }));
+  },
+
+  addBoundaryPointWithHeight: (planId, edgeIndex, point, height) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) => {
+          if (p.id !== planId) return p;
+          const points = insertPointOnEdge(p.boundary.points, edgeIndex, point);
+          const prevHeights = p.boundary.pointHeights ?? [];
+          const pointHeights = [
+            ...prevHeights.slice(0, edgeIndex + 1),
+            height,
+            ...prevHeights.slice(edgeIndex + 1),
+          ];
+          const prevColors = p.boundary.wallColors ?? [];
+          const wallColors = [
+            ...prevColors.slice(0, edgeIndex + 1),
+            null,
+            ...prevColors.slice(edgeIndex + 1),
+          ];
+          return touchPlan({ ...p, boundary: { type: 'polygon', points, pointHeights, wallColors } });
+        }),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  setFloorColor: (planId, color) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) =>
+          p.id === planId ? touchPlan({ ...p, floorColor: color }) : p
+        ),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  setWallColor: (planId, color) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) =>
+          p.id === planId ? touchPlan({ ...p, wallColor: color }) : p
+        ),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  setSegmentWallColor: (planId, segmentIndex, color) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) => {
+          if (p.id !== planId) return p;
+          const wallColors = [...(p.boundary.wallColors ?? Array(p.boundary.points.length).fill(null))];
+          while (wallColors.length < p.boundary.points.length) wallColors.push(null);
+          wallColors[segmentIndex] = color;
+          return touchPlan({ ...p, boundary: { ...p.boundary, wallColors } });
         }),
       }),
       saveState: 'unsaved',

@@ -5,6 +5,7 @@ const PointSchema = z.object({ x: z.number(), y: z.number() });
 const PlanBoundarySchema = z.object({
   type: z.enum(['rectangle', 'polygon']),
   points: z.array(PointSchema).min(3),
+  pointHeights: z.array(z.number().nonnegative().nullable()).optional(),
 });
 
 const GridSettingsSchema = z.object({
@@ -43,6 +44,7 @@ const LayoutObjectSchema = z.object({
   snapDisabled: z.boolean().optional(),
   showDimensions: z.boolean().optional(),
   height3d: z.number().positive().optional(),
+  elevation: z.number().min(0).optional(),
 });
 
 const ZoneSchema = z.object({
@@ -67,6 +69,7 @@ const PlanSchema = z.object({
   width: z.number().positive(),
   height: z.number().positive(),
   pixelsPerUnit: z.number().positive(),
+  wallHeight: z.number().nonnegative().optional(),
   boundary: PlanBoundarySchema,
   grid: GridSettingsSchema,
   objects: z.array(LayoutObjectSchema),

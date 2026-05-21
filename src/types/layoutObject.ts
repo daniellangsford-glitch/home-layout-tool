@@ -24,4 +24,6 @@ export type LayoutObject = {
   snapDisabled?: boolean;
   showDimensions?: boolean;
   height3d?: number;
+  /** Vertical floor offset in real-world units (0 = on the floor, positive = elevated). Used in 3D rendering. */
+  elevation?: number;
 };
