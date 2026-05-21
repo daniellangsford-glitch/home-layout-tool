@@ -18,6 +18,8 @@ type CanvasStore = {
   wallOpacity: number;
   wallHeightEditMode: boolean;
   selectedWallPointIndex: number | null;
+  objectHeightEditMode: boolean;
+  selectedObjectPointIndex: number | null;
 
   setSelectedObject: (id: string | null) => void;
   setSelectedObjects: (ids: string[]) => void;
@@ -37,6 +39,8 @@ type CanvasStore = {
   setWallOpacity: (opacity: number) => void;
   setWallHeightEditMode: (active: boolean) => void;
   setSelectedWallPoint: (index: number | null) => void;
+  setObjectHeightEditMode: (active: boolean) => void;
+  setSelectedObjectPoint: (index: number | null) => void;
 };
 
 export const useCanvasStore = create<CanvasStore>((set, get) => ({
@@ -53,6 +57,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   wallOpacity: 1,
   wallHeightEditMode: false,
   selectedWallPointIndex: null,
+  objectHeightEditMode: false,
+  selectedObjectPointIndex: null,
 
   setSelectedObject: (id) => set({
     selectedObjectIds: id ? [id] : [],
@@ -91,4 +97,6 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   setWallOpacity: (opacity) => set({ wallOpacity: opacity }),
   setWallHeightEditMode: (active) => set({ wallHeightEditMode: active, selectedWallPointIndex: null }),
   setSelectedWallPoint: (index) => set({ selectedWallPointIndex: index }),
+  setObjectHeightEditMode: (active) => set({ objectHeightEditMode: active, selectedObjectPointIndex: null }),
+  setSelectedObjectPoint: (index) => set({ selectedObjectPointIndex: index }),
 }));

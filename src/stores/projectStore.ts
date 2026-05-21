@@ -57,6 +57,11 @@ type ProjectStore = {
   setFloorColor: (planId: string, color: string) => void;
   setWallColor: (planId: string, color: string) => void;
   setSegmentWallColor: (planId: string, segmentIndex: number, color: string | null) => void;
+  setObjectPointHeight: (planId: string, objId: string, pointIndex: number, height: number | null) => void;
+  setObjectPointHeightNoPush: (planId: string, objId: string, pointIndex: number, height: number | null) => void;
+  addObjectFootprintStep: (planId: string, objId: string, afterPointIndex: number) => void;
+  addObjectFootprintMidpoint: (planId: string, objId: string, edgeIndex: number) => void;
+  removeObjectFootprintPoint: (planId: string, objId: string, pointIndex: number) => void;
 
   // Zones
   addZone: (planId: string, zone: Omit<Zone, 'id'>) => void;
@@ -230,9 +235,20 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           p.id === planId
             ? touchPlan({
                 ...p,
-                objects: p.objects.map((o) =>
-                  o.id === objectId ? { ...o, ...updates } : o
-                ),
+                objects: p.objects.map((o) => {
+                  if (o.id !== objectId) return o;
+                  const merged = { ...o, ...updates };
+                  // When position changes, translate footprint3d so custom shapes move with the object
+                  if (o.footprint3d && o.footprint3d.length >= 3 &&
+                      (updates.x !== undefined || updates.y !== undefined)) {
+                    const dx = (updates.x ?? o.x) - o.x;
+                    const dy = (updates.y ?? o.y) - o.y;
+                    if (dx !== 0 || dy !== 0) {
+                      merged.footprint3d = o.footprint3d.map((pt) => ({ x: pt.x + dx, y: pt.y + dy }));
+                    }
+                  }
+                  return merged;
+                }),
               })
             : p
         ),
@@ -516,6 +532,143 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           while (wallColors.length < p.boundary.points.length) wallColors.push(null);
           wallColors[segmentIndex] = color;
           return touchPlan({ ...p, boundary: { ...p.boundary, wallColors } });
+        }),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  setObjectPointHeight: (planId, objId, pointIndex, height) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) => {
+          if (p.id !== planId) return p;
+          return touchPlan({
+            ...p,
+            objects: p.objects.map((o) => {
+              if (o.id !== objId) return o;
+              const n = (o.footprint3d ?? []).length || 4;
+              const ch = [...(o.cornerHeights ?? Array(n).fill(null))];
+              while (ch.length < n) ch.push(null);
+              ch[pointIndex] = height;
+              return { ...o, cornerHeights: ch };
+            }),
+          });
+        }),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  setObjectPointHeightNoPush: (planId, objId, pointIndex, height) => {
+    set((state) => ({
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) => {
+          if (p.id !== planId) return p;
+          return touchPlan({
+            ...p,
+            objects: p.objects.map((o) => {
+              if (o.id !== objId) return o;
+              const n = (o.footprint3d ?? []).length || 4;
+              const ch = [...(o.cornerHeights ?? Array(n).fill(null))];
+              while (ch.length < n) ch.push(null);
+              ch[pointIndex] = height;
+              return { ...o, cornerHeights: ch };
+            }),
+          });
+        }),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  addObjectFootprintStep: (planId, objId, afterPointIndex) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) => {
+          if (p.id !== planId) return p;
+          return touchPlan({
+            ...p,
+            objects: p.objects.map((o) => {
+              if (o.id !== objId) return o;
+              // footprint3d stores ABSOLUTE world coordinates
+              const fp = o.footprint3d && o.footprint3d.length >= 3
+                ? o.footprint3d
+                : [{ x: o.x, y: o.y }, { x: o.x + o.width, y: o.y }, { x: o.x + o.width, y: o.y + o.height }, { x: o.x, y: o.y + o.height }];
+              const ch = [...(o.cornerHeights ?? Array(fp.length).fill(null))];
+              while (ch.length < fp.length) ch.push(null);
+              const insertPt = { ...fp[afterPointIndex] };
+              const newFp = [...fp.slice(0, afterPointIndex + 1), insertPt, ...fp.slice(afterPointIndex + 1)];
+              const newCh: (number | null)[] = [...ch.slice(0, afterPointIndex + 1), 0, ...ch.slice(afterPointIndex + 1)];
+              return { ...o, footprint3d: newFp, cornerHeights: newCh };
+            }),
+          });
+        }),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  addObjectFootprintMidpoint: (planId, objId, edgeIndex) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) => {
+          if (p.id !== planId) return p;
+          return touchPlan({
+            ...p,
+            objects: p.objects.map((o) => {
+              if (o.id !== objId) return o;
+              // footprint3d stores ABSOLUTE world coordinates
+              const fp = o.footprint3d && o.footprint3d.length >= 3
+                ? o.footprint3d
+                : [{ x: o.x, y: o.y }, { x: o.x + o.width, y: o.y }, { x: o.x + o.width, y: o.y + o.height }, { x: o.x, y: o.y + o.height }];
+              const n = fp.length;
+              const j = (edgeIndex + 1) % n;
+              const midPt = { x: (fp[edgeIndex].x + fp[j].x) / 2, y: (fp[edgeIndex].y + fp[j].y) / 2 };
+              const ch = [...(o.cornerHeights ?? Array(n).fill(null))];
+              while (ch.length < n) ch.push(null);
+              const newFp = [...fp.slice(0, edgeIndex + 1), midPt, ...fp.slice(edgeIndex + 1)];
+              const newCh: (number | null)[] = [...ch.slice(0, edgeIndex + 1), null, ...ch.slice(edgeIndex + 1)];
+              return { ...o, footprint3d: newFp, cornerHeights: newCh };
+            }),
+          });
+        }),
+      }),
+      saveState: 'unsaved',
+    }));
+  },
+
+  removeObjectFootprintPoint: (planId, objId, pointIndex) => {
+    set((state) => ({
+      past: pushPast(state.past, state.project), future: [],
+      project: touchProject({
+        ...state.project,
+        plans: state.project.plans.map((p) => {
+          if (p.id !== planId) return p;
+          return touchPlan({
+            ...p,
+            objects: p.objects.map((o) => {
+              if (o.id !== objId) return o;
+              const fp = o.footprint3d && o.footprint3d.length >= 3 ? o.footprint3d : null;
+              if (!fp || fp.length <= 3) return o;
+              const newFp = fp.filter((_, i) => i !== pointIndex);
+              const ch = (o.cornerHeights ?? []).filter((_, i) => i !== pointIndex);
+              // If back to the 4 default absolute corners, clear footprint3d
+              const isDefault = newFp.length === 4 &&
+                newFp[0].x === o.x && newFp[0].y === o.y &&
+                newFp[1].x === o.x + o.width && newFp[1].y === o.y &&
+                newFp[2].x === o.x + o.width && newFp[2].y === o.y + o.height &&
+                newFp[3].x === o.x && newFp[3].y === o.y + o.height;
+              return { ...o, footprint3d: isDefault ? undefined : newFp, cornerHeights: ch };
+            }),
+          });
         }),
       }),
       saveState: 'unsaved',

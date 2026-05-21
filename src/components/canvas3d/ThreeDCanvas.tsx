@@ -354,18 +354,103 @@ function SceneZone({ zone }: { zone: Zone }) {
 
 // ─── Objects ──────────────────────────────────────────────────────────────────
 
-function SceneObject({ object, unit }: { object: LayoutObject; unit: MeasurementUnit }) {
+// Returns footprint as absolute world coordinates.
+// For plain rectangles (no footprint3d), coords include obj.x/obj.y so geoKey
+// captures position changes and the geometry rebuilds when the object moves.
+function getObjectFootprint(obj: LayoutObject): { x: number; y: number }[] {
+  if (obj.footprint3d && obj.footprint3d.length >= 3) {
+    const fps = obj.footprint3d;
+    // Validate: the footprint's bounding-box origin should be close to the object's
+    // current position. If not, the footprint3d is stale (e.g. from a coord-system
+    // change) — fall back to the default rectangle so the object renders correctly.
+    const minX = Math.min(...fps.map((p) => p.x));
+    const minY = Math.min(...fps.map((p) => p.y));
+    if (Math.abs(minX - obj.x) <= 1.0 && Math.abs(minY - obj.y) <= 1.0) {
+      return fps;
+    }
+  }
+  return [
+    { x: obj.x, y: obj.y },
+    { x: obj.x + obj.width, y: obj.y },
+    { x: obj.x + obj.width, y: obj.y + obj.height },
+    { x: obj.x, y: obj.y + obj.height },
+  ];
+}
+
+function buildVariableHeightPolyGeo(
+  footprint: { x: number; y: number }[],  // absolute world coords
+  heights: number[],
+  elev: number,
+): THREE.BufferGeometry {
+  const n = footprint.length;
+  const verts: number[] = [];
+  // World-space vertices: bottom at y=elev, top at y=elev+heights[i]
+  for (const p of footprint) verts.push(p.x, elev, p.y);
+  for (let i = 0; i < n; i++) verts.push(footprint[i].x, elev + heights[i], footprint[i].y);
+
+  const idx: number[] = [];
+  // Bottom face — CCW from below → normal -Y: fan (0, i, i+1)
+  for (let i = 1; i < n - 1; i++) idx.push(0, i, i + 1);
+  // Top face — CCW from above → normal +Y: fan (n, n+i+1, n+i)
+  for (let i = 1; i < n - 1; i++) idx.push(n, n + i + 1, n + i);
+  // Side faces — skip degenerate zero-length edges (step joints)
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const dx = footprint[j].x - footprint[i].x;
+    const dz = footprint[j].y - footprint[i].y;
+    if (dx * dx + dz * dz < 0.00001) continue;
+    // (bi, ti, tj) then (bi, tj, bj) → correct outward normals
+    idx.push(i, n + i, n + j);
+    idx.push(i, n + j, j);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+
+function SceneObject({ object, unit, plan, orbitRef }: {
+  object: LayoutObject;
+  unit: MeasurementUnit;
+  plan: Plan;
+  orbitRef: React.RefObject<{ enabled: boolean } | null>;
+}) {
   const setSelectedObject = useCanvasStore((s) => s.setSelectedObject);
   const selectedObjectIds = useCanvasStore((s) => s.selectedObjectIds);
+  const objectHeightEditMode = useCanvasStore((s) => s.objectHeightEditMode);
+  const selectedObjectPointIndex = useCanvasStore((s) => s.selectedObjectPointIndex);
+  const setSelectedObjectPoint = useCanvasStore((s) => s.setSelectedObjectPoint);
+  const setObjectPointHeightNoPush = useProjectStore((s) => s.setObjectPointHeightNoPush);
+  const addObjectFootprintMidpoint = useProjectStore((s) => s.addObjectFootprintMidpoint);
+  const pushUndoSnapshot = useProjectStore((s) => s.pushUndoSnapshot);
+  const { camera, size } = useThree();
   const isSelected = selectedObjectIds.includes(object.id);
 
+  const h = object.height3d ?? defaultObjectHeight(unit);
+  const elev = object.elevation ?? 0;
+
+  // Footprint in local coords (offsets from object.x, object.y) — always before any early return
+  const footprint = getObjectFootprint(object);
+  const n = footprint.length;
+  const heights = footprint.map((_, i) => object.cornerHeights?.[i] ?? h);
+  const labelH = Math.max(...heights);
+
+  // geoKey encodes full world position + shape — rebuilds geometry when anything changes
+  const geoKey = `${footprint.map((p) => `${p.x},${p.y}`).join(';')}|${heights.join(',')}|${elev}`;
+  const varGeo = useMemo(
+    () => buildVariableHeightPolyGeo(footprint, heights, elev),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [geoKey]
+  );
+
+  // Early return AFTER all hooks
   if (!object.visible || object.shape === 'text' || object.shape === 'line') return null;
 
   const cx = object.x + object.width / 2;
   const cz = object.y + object.height / 2;
-  const h = object.height3d ?? defaultObjectHeight(unit);
-  const elev = object.elevation ?? 0;
-  const yBase = elev;
   const color = object.fill || '#94a3b8';
   const isTransparent = object.opacity < 0.99;
 
@@ -388,11 +473,9 @@ function SceneObject({ object, unit }: { object: LayoutObject; unit: Measurement
 
   let mesh: React.ReactNode = null;
   if (object.shape === 'rectangle') {
+    // Geometry encodes absolute world coords; mesh stays at origin.
     mesh = (
-      <mesh position={[cx, yBase + h / 2, cz]} onClick={handleClick}>
-        <boxGeometry args={[object.width, h, object.height]} />
-        {material}
-      </mesh>
+      <mesh geometry={varGeo} onClick={handleClick}>{material}</mesh>
     );
   } else if (object.shape === 'circle' || object.shape === 'ellipse') {
     const rx = object.width / 2;
@@ -400,14 +483,14 @@ function SceneObject({ object, unit }: { object: LayoutObject; unit: Measurement
     const isCircle = Math.abs(rx - rz) < 0.01;
     if (isCircle) {
       mesh = (
-        <mesh position={[cx, yBase + h / 2, cz]} onClick={handleClick}>
+        <mesh position={[cx, elev + h / 2, cz]} onClick={handleClick}>
           <cylinderGeometry args={[rx, rx, h, 40]} />
           {material}
         </mesh>
       );
     } else {
       mesh = (
-        <mesh position={[cx, yBase + h / 2, cz]} scale={[object.width, 1, object.height]} onClick={handleClick}>
+        <mesh position={[cx, elev + h / 2, cz]} scale={[object.width, 1, object.height]} onClick={handleClick}>
           <cylinderGeometry args={[0.5, 0.5, h, 40]} />
           {material}
         </mesh>
@@ -417,11 +500,13 @@ function SceneObject({ object, unit }: { object: LayoutObject; unit: Measurement
 
   if (!mesh) return null;
 
+  const showHandles = isSelected && objectHeightEditMode && object.shape === 'rectangle';
+
   return (
     <>
       {mesh}
       <Text
-        position={[cx, yBase + h + 0.15, cz]}
+        position={[cx, elev + labelH + 0.15, cz]}
         fontSize={Math.max(0.3, Math.min(0.7, object.width * 0.25))}
         color={isSelected ? '#1d4ed8' : '#334155'}
         anchorX="center"
@@ -431,6 +516,72 @@ function SceneObject({ object, unit }: { object: LayoutObject; unit: Measurement
       >
         {object.name}
       </Text>
+
+      {showHandles && (() => {
+        const cornerR = Math.max(plan.width, plan.height) * 0.015;
+        const edgeR = cornerR * 0.6;
+        // Corner handles — positioned above the top surface so they never sit inside the mesh
+        const cornerHandles = footprint.map((pt, i) => {
+          const ptI = i; // explicit capture for closure
+          // Footprint is already in absolute world coords
+          const wx = pt.x;
+          const wz = pt.y;
+          const hY = elev + heights[ptI] + cornerR; // raised above top surface
+          const onPointerDown = (e: import('@react-three/fiber').ThreeEvent<PointerEvent>) => {
+            e.stopPropagation();
+            setSelectedObjectPoint(ptI);
+            if (orbitRef.current) orbitRef.current.enabled = false;
+            pushUndoSnapshot();
+            const cam = camera as THREE.PerspectiveCamera;
+            const dist = cam.position.distanceTo(new THREE.Vector3(wx, hY, wz));
+            const worldPerPx = (2 * Math.tan((cam.fov * Math.PI / 180) / 2) * dist) / size.height;
+            let lastY = e.clientY;
+            let currentH = heights[ptI];
+            const onMove = (ev: PointerEvent) => {
+              const delta = ev.clientY - lastY;
+              lastY = ev.clientY;
+              currentH = Math.max(0, currentH - delta * worldPerPx);
+              setObjectPointHeightNoPush(plan.id, object.id, ptI, Math.round(currentH * 100) / 100);
+            };
+            const onUp = () => {
+              window.removeEventListener('pointermove', onMove);
+              window.removeEventListener('pointerup', onUp);
+              if (orbitRef.current) orbitRef.current.enabled = true;
+            };
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+          };
+          return (
+            <mesh key={`ch-${ptI}`} position={[wx, hY, wz]}
+              onPointerDown={onPointerDown} onClick={(e) => e.stopPropagation()}>
+              <sphereGeometry args={[cornerR, 16, 16]} />
+              <meshStandardMaterial
+                color={selectedObjectPointIndex === ptI ? '#3b82f6' : '#64748b'}
+                roughness={0.3} metalness={0.2}
+                emissive={selectedObjectPointIndex === ptI ? '#1d4ed8' : '#000000'}
+                emissiveIntensity={selectedObjectPointIndex === ptI ? 0.3 : 0}
+              />
+            </mesh>
+          );
+        });
+        // Edge handles — footprint is absolute world coords, midpoint is world coords
+        const edgeHandles = footprint.map((pt, i) => {
+          const edgeI = i; // explicit capture
+          const j = (i + 1) % n;
+          const next = footprint[j];
+          const ex = (pt.x + next.x) / 2;
+          const ez = (pt.y + next.y) / 2;
+          const ey = elev + Math.max(heights[edgeI], heights[j]) + cornerR * 2;
+          return (
+            <mesh key={`eh-${edgeI}`} position={[ex, ey, ez]}
+              onClick={(e) => { e.stopPropagation(); addObjectFootprintMidpoint(plan.id, object.id, edgeI); }}>
+              <sphereGeometry args={[edgeR, 12, 12]} />
+              <meshStandardMaterial color="#94a3b8" opacity={0.75} transparent roughness={0.3} metalness={0.1} />
+            </mesh>
+          );
+        });
+        return [...cornerHandles, ...edgeHandles];
+      })()}
     </>
   );
 }
@@ -485,7 +636,7 @@ export function ThreeDCanvas({ plan }: Props) {
             <SceneZone key={z.id} zone={z} />
           ))}
           {plan.objects.map((obj) => (
-            <SceneObject key={obj.id} object={obj} unit={plan.unit} />
+            <SceneObject key={obj.id} object={obj} unit={plan.unit} plan={plan} orbitRef={orbitRef} />
           ))}
         </Suspense>
 

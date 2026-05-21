@@ -26,7 +26,14 @@ export function ThreeDSettings({ plan }: Props) {
   const setFloorColor = useProjectStore((s) => s.setFloorColor);
   const setWallColor = useProjectStore((s) => s.setWallColor);
   const setSegmentWallColor = useProjectStore((s) => s.setSegmentWallColor);
+  const setObjectPointHeight = useProjectStore((s) => s.setObjectPointHeight);
+  const addObjectFootprintStep = useProjectStore((s) => s.addObjectFootprintStep);
+  const removeObjectFootprintPoint = useProjectStore((s) => s.removeObjectFootprintPoint);
   const updateObject = useProjectStore((s) => s.updateObject);
+  const objectHeightEditMode = useCanvasStore((s) => s.objectHeightEditMode);
+  const selectedObjectPointIndex = useCanvasStore((s) => s.selectedObjectPointIndex);
+  const setObjectHeightEditMode = useCanvasStore((s) => s.setObjectHeightEditMode);
+  const setSelectedObjectPoint = useCanvasStore((s) => s.setSelectedObjectPoint);
 
   const selectedObject =
     selectedObjectIds.length === 1
@@ -180,8 +187,86 @@ export function ThreeDSettings({ plan }: Props) {
             step={0.1}
             onChange={(v) => updateObject(plan.id, selectedObject.id, { elevation: v })}
           />
+
+          {selectedObject.shape === 'rectangle' && (
+            <>
+              <Button
+                variant={objectHeightEditMode ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setObjectHeightEditMode(!objectHeightEditMode)}
+              >
+                {objectHeightEditMode ? '✓ Done Editing Shape' : 'Edit Object Shape'}
+              </Button>
+              <p className="text-xs text-gray-400 leading-tight">
+                {objectHeightEditMode
+                  ? 'Drag corner handles to set height. Click edge handles to add a step.'
+                  : 'Enable to drag corner handles and shape the object in 3D.'}
+              </p>
+              {objectHeightEditMode && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateObject(plan.id, selectedObject.id, { cornerHeights: undefined, footprint3d: undefined })}
+                >
+                  Reset Shape
+                </Button>
+              )}
+            </>
+          )}
         </div>
       )}
+
+      {/* Selected object corner */}
+      {objectHeightEditMode && selectedObject?.shape === 'rectangle' && selectedObjectPointIndex !== null && (() => {
+        const baseH = selectedObject.height3d ?? (plan.unit === 'm' ? 0.75 : plan.unit === 'ft' ? 2.5 : 30);
+        const fp = selectedObject.footprint3d && selectedObject.footprint3d.length >= 3
+          ? selectedObject.footprint3d
+          : [
+              { x: selectedObject.x, y: selectedObject.y },
+              { x: selectedObject.x + selectedObject.width, y: selectedObject.y },
+              { x: selectedObject.x + selectedObject.width, y: selectedObject.y + selectedObject.height },
+              { x: selectedObject.x, y: selectedObject.y + selectedObject.height },
+            ];
+        const currentH = selectedObject.cornerHeights?.[selectedObjectPointIndex] ?? baseH;
+        const canRemove = fp.length > 3;
+        return (
+          <div className="border-t pt-3 flex flex-col gap-2">
+            <div className="text-xs font-medium text-gray-600">Corner {selectedObjectPointIndex + 1}</div>
+            <NumberInput
+              label={`Height (${plan.unit})`}
+              value={Math.round(currentH * 100) / 100}
+              min={0}
+              step={0.1}
+              onChange={(v) => setObjectPointHeight(plan.id, selectedObject.id, selectedObjectPointIndex, v)}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => addObjectFootprintStep(plan.id, selectedObject.id, selectedObjectPointIndex)}
+            >
+              Add Step Here
+            </Button>
+            <p className="text-xs text-gray-400 leading-tight">
+              Inserts a corner at the same position with height 0, creating a sharp vertical face.
+            </p>
+            {canRemove && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  removeObjectFootprintPoint(plan.id, selectedObject.id, selectedObjectPointIndex);
+                  setSelectedObjectPoint(null);
+                }}
+              >
+                Remove Corner
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setSelectedObjectPoint(null)}>
+              Deselect
+            </Button>
+          </div>
+        );
+      })()}
 
       {/* Selected zone */}
       {selectedZone && (
