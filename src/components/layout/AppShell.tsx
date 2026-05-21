@@ -13,7 +13,8 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 export function AppShell() {
   const stageRef = useRef<Konva.Stage | null>(null);
-  const getActivePlan = useProjectStore((s) => s.getActivePlan);
+  const activePlanId = useProjectStore((s) => s.activePlanId);
+  const plans = useProjectStore((s) => s.project.plans);
   const loadFromStorage = useProjectStore((s) => s.loadFromStorage);
   const renderMode = useCanvasStore((s) => s.renderMode);
 
@@ -24,7 +25,7 @@ export function AppShell() {
   useAutosave();
   useKeyboardShortcuts();
 
-  const activePlan = getActivePlan();
+  const activePlan = (activePlanId ? plans.find((p) => p.id === activePlanId) : null) ?? plans[0] ?? null;
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
